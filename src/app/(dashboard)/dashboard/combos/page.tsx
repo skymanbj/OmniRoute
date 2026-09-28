@@ -63,6 +63,7 @@ import {
 } from "@/lib/combos/intelligentRouting";
 import { getComboStepTarget } from "@/lib/combos/steps";
 import { resolveServerErrorMessage } from "@/lib/api/serverErrorMessage";
+import { getModelDisplayName } from "@/lib/display/names";
 import { useTranslations } from "next-intl";
 
 const ModelSelectModal = dynamic(() => import("@/shared/components/ModelSelectModal"), {
@@ -690,12 +691,21 @@ function formatComboEntryDisplay(
   const providerIdentifier = normalizedEntry.providerId || parsed.providerId;
   const builderProvider = findBuilderProviderByIdentifier(builderProviders, providerIdentifier);
   const providerNode = findProviderNodeByIdentifier(providerNodes, providerIdentifier);
-  const providerLabel = builderProvider?.displayName || providerNode?.name || providerIdentifier;
+  const friendlyProvider = builderProvider?.displayName || providerNode?.name;
+  const isVerboseProvider =
+    !friendlyProvider &&
+    (providerIdentifier?.startsWith("openai-compatible-") ||
+      providerIdentifier?.startsWith("anthropic-compatible-") ||
+      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(
+        providerIdentifier || ""
+      ));
+  const providerLabel = friendlyProvider || (isVerboseProvider ? "" : providerIdentifier);
   const modelLabel =
     builderProvider?.models?.find((model) => model.id === parsed.modelId)?.name || parsed.modelId;
+  const displayModel = providerLabel ? `${providerLabel}/${modelLabel}` : modelLabel;
 
   if (!includeConnection) {
-    return `${providerLabel}/${modelLabel}`;
+    return displayModel;
   }
 
   const connectionId = normalizedEntry.connectionId || null;
@@ -709,14 +719,14 @@ function formatComboEntryDisplay(
     : null;
 
   if (connectionId) {
-    return `${providerLabel}/${modelLabel} · ${connectionLabel || `acct ${connectionId.slice(0, 8)}`}`;
+    return `${displayModel} · ${connectionLabel || `acct ${connectionId.slice(0, 8)}`}`;
   }
 
   if (normalizedEntry.providerId || builderProvider) {
-    return `${providerLabel}/${modelLabel} · dynamic account`;
+    return `${displayModel} · dynamic account`;
   }
 
-  return `${providerLabel}/${modelLabel}`;
+  return displayModel;
 }
 
 export default function CombosPage() {
@@ -1989,8 +1999,11 @@ function TestResultsView({
           <div className="min-w-0">
             <div>
               Resolved by:{" "}
-              <code className="text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded font-mono">
-                {results.resolvedBy}
+              <code
+                title={results.resolvedBy}
+                className="text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded font-mono"
+              >
+                {getModelDisplayName(results.resolvedBy)}
               </code>
             </div>
             {results.resolvedByTarget?.connectionId || results.resolvedByTarget?.label ? (
@@ -2037,8 +2050,11 @@ function TestResultsView({
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 min-w-0">
-                <code className="font-mono font-medium block truncate text-text-main">
-                  {r.model}
+                <code
+                  title={r.model}
+                  className="font-mono font-medium block truncate text-text-main"
+                >
+                  {getModelDisplayName(r.model)}
                 </code>
               </div>
               <div className="mt-0.5 text-[10px] text-text-muted truncate">

@@ -75,3 +75,48 @@ export function getProviderDisplayName(
 
   return providerId;
 }
+
+/**
+ * Friendly display name for a model string.
+ *
+ * Prevents verbose internal provider IDs / UUIDs (such as
+ * "openai-compatible-chat-bb3c0021-7f50-4471-bc5c-75d9d2c6b8b2/agnes-2.5-flash")
+ * from cluttering dashboards, combo cards, or test result views.
+ */
+export function getModelDisplayName(
+  rawModel: string | null | undefined,
+  providerNode?: ProviderNodeLike | null
+): string {
+  if (!rawModel || typeof rawModel !== "string") return "";
+  const trimmed = rawModel.trim();
+  const slashIdx = trimmed.indexOf("/");
+  if (slashIdx === -1) {
+    if (isCompatibleProviderConnectionId(trimmed)) {
+      return getProviderDisplayName(trimmed, providerNode);
+    }
+    return trimmed;
+  }
+
+  const providerPart = trimmed.slice(0, slashIdx);
+  const modelPart = trimmed.slice(slashIdx + 1);
+
+  // If a friendly provider node name is available, show "NodeName / model"
+  if (providerNode?.name?.trim()) {
+    return `${providerNode.name.trim()} / ${modelPart}`;
+  }
+
+  // Strip dynamic compatible provider IDs or any provider ID containing UUIDs
+  const isCompatible =
+    isCompatibleProviderConnectionId(providerPart) ||
+    providerPart.startsWith("openai-compatible-") ||
+    providerPart.startsWith("anthropic-compatible-");
+  const hasUuid = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(
+    providerPart
+  );
+
+  if (isCompatible || hasUuid) {
+    return modelPart || trimmed;
+  }
+
+  return trimmed;
+}

@@ -18,7 +18,7 @@ import {
   type ComboControlCenterTarget,
   type ComboControlCenterTargetHealth,
 } from "@/lib/combos/controlCenter";
-import { getProviderDisplayName } from "@/lib/display/names";
+import { getModelDisplayName, getProviderDisplayName } from "@/lib/display/names";
 
 type TimeRange = "1h" | "24h" | "7d" | "30d";
 
@@ -193,8 +193,11 @@ function ResolvedTargetRow({ target }: { target: ComboControlCenterTargetHealth 
     <div className="rounded-xl border border-border bg-surface p-3">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
-          <p className="truncate font-mono text-sm text-text-main">
-            {target.model || t("unknown")}
+          <p
+            title={target.model || undefined}
+            className="truncate font-mono text-sm text-text-main"
+          >
+            {getModelDisplayName(target.model) || t("unknown")}
           </p>
           <p className="mt-1 text-xs text-text-muted">
             {target.provider ? getProviderDisplayName(target.provider) : t("unknownProvider")} ·{" "}
